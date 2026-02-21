@@ -13,8 +13,16 @@ import pandas as pd
 import cv2
 import numpy as np
 from flask import Flask, json, request, jsonify, send_file
+from sklearn import logger
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_cors import CORS
+from waitress import serve
+import warnings
+from sklearn.exceptions import InconsistentVersionWarning
+import logging
+
+# Suppress sklearn version mismatch warnings
+warnings.filterwarnings("ignore", category=InconsistentVersionWarning)
 
 
 
@@ -136,6 +144,15 @@ def verify_admin(email):
     conn.close()
     return result and result[0] == 1
 
+
+@app.before_request
+def log_request_info():
+    logger.info(
+        f"{request.remote_addr} - {request.method} {request.path} - User: {request.headers.get('X-User-Email', 'N/A')} - Admin: {request.headers.get('X-Admin-Email', 'N/A')}"
+    )
+# Log HTTP requests to terminal
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("waitress")  # optional
 
 # ================= Admin Routes ======================
 @app.route("/api/admin/users", methods=["GET"])
@@ -1302,4 +1319,5 @@ if __name__ == "__main__":
     print(f"✅ Server running on:")
     print(f"  Localhost: http://127.0.0.1:5000")
     print(f"  Network:   http://{local_ip}:5000")
-    app.run(host="0.0.0.0", port=5000, debug=False, threaded=True)
+    print("🚀 Starting server on http://0.0.0.0:5000 ...")
+    serve(app, host="0.0.0.0", port=5000, threads=5)
